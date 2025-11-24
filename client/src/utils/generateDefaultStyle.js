@@ -1,68 +1,79 @@
 export const defaultStyle = (elementType) => {
   const base = {
-    display: "block",
-    position: "relative"
+    display: "flex",
+    flexDirection: "column",
+    position: "relative",
+    boxSizing: "border-box",
+    width: "100%",
   };
 
   const presets = {
     div: {
-      width: 300,
-      height: 150,
-      backgroundColor: "#f5f5f5",
-      padding: 20,
-      borderRadius: 8,
+      minHeight: "50px",
+      backgroundColor: "transparent", // Clean look, no background by default
+      padding: "10px",
+      // Border hata diya taaki nested divs gande na dikhein
+      gap: "10px", 
     },
 
     section: {
+      minHeight: "200px",
       width: "100%",
-      padding: 40,
-      backgroundColor: "#fafafa",
+      padding: "40px",
+      backgroundColor: "#ffffff",
+      gap: "20px",
+      // Sirf Section ko alag dikhane ke liye halka border
+      borderBottom: "1px solid #f0f0f0", 
     },
 
     p: {
-      fontSize: 16,
-      color: "#111",
-      lineHeight: 1.5,
-      marginBottom: 10,
+      fontSize: "16px",
+      color: "#4b5563",
+      lineHeight: "1.6",
+      marginBottom: "0px",
+      width: "auto",
     },
 
     h1: {
-      fontSize: 32,
-      fontWeight: "700",
-      marginBottom: 15,
-      color: "#111",
+      fontSize: "36px",
+      fontWeight: "800",
+      color: "#111827",
+      lineHeight: "1.2",
+      marginBottom: "10px",
+      width: "auto",
     },
 
     h2: {
-      fontSize: 24,
+      fontSize: "24px",
       fontWeight: "600",
-      marginBottom: 12,
-      color: "#222",
+      color: "#1f2937",
+      marginBottom: "8px",
+      width: "auto",
     },
 
     button: {
       backgroundColor: "#2563eb",
       color: "#fff",
-      padding: "10px 20px",
-      borderRadius: 8,
-      fontSize: 16,
+      padding: "10px 24px",
+      borderRadius: "6px",
+      fontSize: "14px",
       fontWeight: "500",
       cursor: "pointer",
-      display: "inline-block",
+      border: "none",
+      width: "fit-content",
+      display: "inline-flex",
+      alignItems: "center",
+      justifyContent: "center",
     },
 
     img: {
-      width: 200,
+      width: "100%",
+      maxWidth: "100%", 
       height: "auto",
       objectFit: "cover",
-      borderRadius: 6,
+      borderRadius: "4px",
+      display: "block",
     },
-
-    span: {
-      fontSize: 14,
-      color: "#111",
-      display: "inline-block",
-    }
   };
 
   return { ...base, ...(presets[elementType] || {}) };

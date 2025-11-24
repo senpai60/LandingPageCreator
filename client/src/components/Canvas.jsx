@@ -1,42 +1,34 @@
-import ElementCreateContext from "./layout/ElementCreateContext";
 import { useElementContext } from "../context/ElementCreateContext";
-import { useStyleContext } from "../context/StyleContext";
-import { useEffect, useState } from "react";
-import { renderElement } from "../utils/renderElement";
+import { useDroppable } from "@dnd-kit/core";
+import ElementWrapper from "./ElementWrapper"; // Import the new component
 
-export default function Canvas({
-  showCreateElementContext,
-  setShowCreateElementContext,
-}) {
+export default function Canvas() {
+  const { elements, setSelectedId } = useElementContext();
 
-
-  const { elements } = useElementContext();
-  const { styles, selectElement, selectedElementId } = useStyleContext();
-
-  
+  // Root canvas droppable zone (fallback)
+  const { setNodeRef, isOver } = useDroppable({
+    id: "canvas-drop-zone",
+  });
 
   return (
-    <main className="flex-1 bg-gray-100 p-6 overflow-y-auto">
-      {showCreateElementContext && (
-        <ElementCreateContext
-          setShowCreateElementContext={setShowCreateElementContext}
-        />
-      )}
-
+    <main 
+      className="flex-1 bg-[#e5e7eb] p-8 overflow-y-auto flex justify-center"
+      onClick={() => setSelectedId(null)} // Click outside to deselect
+    >
       <div
-        id="canvas"
-        className="min-h-[600px] bg-white border rounded-lg shadow-sm p-6"
-        onClick={() => selectElement(null)} // Optional: Deselect when clicking background
+        ref={setNodeRef}
+        className={`
+            w-full max-w-[1200px] min-h-[800px] transition-all duration-200 ease-in-out
+            ${isOver ? 'bg-blue-50' : ''}
+        `}
       >
-        {elements.length === 0 ? (
-          <p className="text-gray-500 text-center mt-40">
-            Drag & drop components here to build your landing page
-          </p>
+        {/* Start rendering from Root ID */}
+        {elements["root"] ? (
+           <ElementWrapper elementId="root" />
         ) : (
-          // 3. Pass styles, selection handler, and selected ID
-          elements.map((el) => 
-            renderElement(el, styles, selectElement, selectedElementId)
-          )
+           <div className="p-10 text-center text-red-500 bg-white rounded">
+             Error: Root element missing.
+           </div>
         )}
       </div>
     </main>

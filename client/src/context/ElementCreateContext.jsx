@@ -1,85 +1,127 @@
 import { createContext, useContext, useState } from "react";
+import { defaultStyle } from "../utils/generateDefaultStyle";
 
-// 1. Create Context
-const ElementCreateContext = createContext();
+const ElementContext = createContext();
 
-// 2. Provider Component
+// Initial Root Element (The main canvas container)
+const initialElements = {
+  "root": {
+    id: "root",
+    type: "div",
+    children: [],
+    content: "",
+    styles: {
+      minHeight: "600px",
+      padding: "20px",
+      backgroundColor: "#ffffff",
+      display: "flex",
+      flexDirection: "column",
+      gap: "10px"
+    },
+    props: {}
+  }
+};
+
 export const ElementProvider = ({ children }) => {
-  const [elements, setElements] = useState([]);
-  
-  // --- MISSING STATE FIXED HERE ---
-  const [targetParentId, setTargetParentId] = useState(null);
+  // FLAT STATE STRUCTURE (Database Style)
+  const [elements, setElements] = useState(initialElements);
+  const [selectedId, setSelectedId] = useState(null);
 
-  // ADD NEW ELEMENT (Fixed to handle nesting)
-  const addElement = (newElement, parentId = null) => {
-    if (!parentId) {
-      // Add to root
-      setElements((prev) => [...prev, newElement]);
-    } else {
-      // Add as child to specific parent (Recursive updater)
-      const addZoRecursive = (list) => {
-        return list.map((el) => {
-          if (el.id === parentId) {
-            return { ...el, children: [...(el.children || []), newElement] };
-          }
-          if (el.children && el.children.length > 0) {
-            return { ...el, children: addZoRecursive(el.children) };
-          }
-          return el;
-        });
-      };
-      
-      setElements((prev) => addZoRecursive(prev));
-    }
-  };
+  // --- ACTIONS ---
 
-  // UPDATE ELEMENT (Recursive)
-  const updateElement = (id, updatedData) => {
-    const updateRecursive = (list) => {
-        return list.map((el) => {
-            if (el.id === id) {
-                return { ...el, ...updatedData };
-            }
-            if (el.children && el.children.length > 0) {
-                return { ...el, children: updateRecursive(el.children) };
-            }
-            return el;
-        });
+  // 1. ADD ELEMENT (O(1) Operation)
+  const addElement = (parentId, type) => {
+    const newId = crypto.randomUUID();
+    const newStyle = defaultStyle(type);
+
+    const newElement = {
+      id: newId,
+      type: type,
+      children: [],
+      content: type === "img" ? "" : `New ${type}`,
+      styles: newStyle,
+      props: type === "img" ? { src: "https://via.placeholder.com/150" } : {}
     };
-    setElements((prev) => updateRecursive(prev));
+
+    setElements((prev) => {
+      // Parent validation
+      const parent = prev[parentId];
+      if (!parent) return prev;
+
+      return {
+        ...prev,
+        [newId]: newElement, // Add new item to dictionary
+        [parentId]: {
+          ...parent,
+          children: [...parent.children, newId] // Add ID to parent's children array
+        }
+      };
+    });
+    
+    // Auto-select the new element
+    setSelectedId(newId);
   };
 
-  // DELETE ELEMENT (Recursive)
+  // 2. UPDATE ELEMENT (Content, Styles, Props)
+  const updateElement = (id, updates) => {
+    setElements((prev) => ({
+      ...prev,
+      [id]: { ...prev[id], ...updates }
+    }));
+  };
+
+  // 3. DELETE ELEMENT
+  // Note: For a robust app, we should also delete all children recursively to prevent memory leaks (orphaned items).
   const deleteElement = (id) => {
-     const deleteRecursive = (list) => {
-        return list
-            .filter((el) => el.id !== id)
-            .map((el) => {
-                if (el.children && el.children.length > 0) {
-                    return { ...el, children: deleteRecursive(el.children) };
-                }
-                return el;
-            });
-     };
-     setElements((prev) => deleteRecursive(prev));
+    if (id === "root") return; // Cannot delete root
+
+    setElements((prev) => {
+      const elementToDelete = prev[id];
+      // Find parent to remove the ID from its children list
+      // Since we don't store parentId explicitly to save space, we search for it.
+      // In a production app, storing parentId in the object is better for performance.
+      const parentEntry = Object.entries(prev).find(([_, el]) => el.children.includes(id));
+      
+      if (!parentEntry) return prev;
+      
+      const [parentId, parent] = parentEntry;
+
+      const newElements = { ...prev };
+      delete newElements[id]; // Remove the item
+
+      // Remove from parent's children
+      newElements[parentId] = {
+        ...parent,
+        children: parent.children.filter((childId) => childId !== id)
+      };
+
+      return newElements;
+    });
+
+    if (selectedId === id) setSelectedId(null);
+  };
+
+  // 4. MOVE ELEMENT (Drag and Drop Logic)
+  const moveElement = (dragId, hoverId) => {
+    // Basic implementation: Move dragId to become a child of hoverId
+    // Or reorder if they are siblings (Advanced logic needed for reordering)
+    // For now, we will handle "Add to Container" logic via Drop.
   };
 
   return (
-    <ElementCreateContext.Provider
-      value={{ 
-        elements, 
-        addElement, 
-        updateElement, 
-        deleteElement,
-        // --- EXPOSE THESE NEW VALUES ---
-        targetParentId, 
-        setTargetParentId 
+    <ElementContext.Provider
+      value={{
+        elements,
+        selectedId,
+        setSelectedId,
+        addElement,
+        updateElement,
+        deleteElement
       }}
     >
       {children}
-    </ElementCreateContext.Provider>
+    </ElementContext.Provider>
   );
 };
 
-// 3. Custom Hook for easy usage
-export const useElementContext = () => useContext(ElementCreateContext);
+export const useElementContext = () => useContext(ElementContext);

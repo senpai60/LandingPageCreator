@@ -1,127 +1,106 @@
-import { useState } from "react";
-import { DiamondPlus, ChevronRight, ChevronDown, Box } from 'lucide-react';
+import { CirclePlus, Box, Type, Image as ImageIcon, LayoutTemplate, MousePointerClick, ChevronRight, ChevronDown } from 'lucide-react';
 import { useElementContext } from "../context/ElementCreateContext";
-import { useStyleContext } from "../context/StyleContext";
+import { useDraggable } from "@dnd-kit/core";
+import { useState } from 'react';
+
+// Draggable Item Component (Same as before)
+const DraggableItem = ({ type, icon: Icon, label }) => {
+  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+    id: `sidebar-${type}`,
+    data: { type },
+  });
+
+  const style = transform
+    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 999, opacity: 0.8 }
+    : undefined;
+
+  return (
+    <div ref={setNodeRef} style={style} {...listeners} {...attributes} className="flex flex-col items-center justify-center p-3 bg-white border border-gray-200 rounded-lg cursor-grab hover:shadow-md hover:border-blue-400 transition-all active:cursor-grabbing">
+      <Icon size={20} className="text-gray-600 mb-2" />
+      <span className="text-xs font-medium text-gray-700">{label}</span>
+    </div>
+  );
+};
 
 export default function Sidebar({ setShowCreateElementContext }) {
-  const { elements, setTargetParentId } = useElementContext();
-  const { selectElement, selectedElementId } = useStyleContext();
+  // Ab 'selectedId' aur 'setSelectedId' bhi ElementContext se aayenge
+  const { elements, selectedId, setSelectedId } = useElementContext(); 
 
-  const items2 = ["Text Block", "Image", "Button", "Card"];
+  const tools = [
+    { type: "div", label: "Container", icon: Box },
+    { type: "section", label: "Section", icon: LayoutTemplate },
+    { type: "h1", label: "Heading", icon: Type },
+    { type: "p", label: "Text", icon: Type },
+    { type: "button", label: "Button", icon: MousePointerClick },
+    { type: "img", label: "Image", icon: ImageIcon },
+  ];
 
-  // Helper to handle adding a new ROOT element
-  const handleAddRoot = () => {
-    setTargetParentId(null);
-    setShowCreateElementContext(true);
-  };
+  // --- RECURSIVE COMPONENT FOR LAYERS ---
+  const LayerNode = ({ nodeId, depth = 0 }) => {
+    const element = elements[nodeId];
+    if (!element) return null;
 
-  // Helper to handle adding a CHILD element
-  const handleAddChild = (e, parentId) => {
-    e.stopPropagation(); // Prevent selecting the row when clicking the button
-    setTargetParentId(parentId);
-    setShowCreateElementContext(true);
-  };
-
-  // RECURSIVE COMPONENT to render tree nodes
-  const TreeNode = ({ element, depth = 0 }) => {
-    const [isExpanded, setIsExpanded] = useState(true);
     const hasChildren = element.children && element.children.length > 0;
-    const isSelected = selectedElementId === element.id;
+    const isSelected = selectedId === nodeId;
+    const [expanded, setExpanded] = useState(true);
 
     return (
-      <li className="select-none">
+      <div className="select-none">
         <div 
-          onClick={() => selectElement(element.id)}
+          onClick={() => setSelectedId(nodeId)}
           className={`
-            flex items-center justify-between p-2 rounded cursor-pointer text-sm mb-1
-            ${isSelected ? 'bg-blue-50 border-blue-200 border' : 'hover:bg-gray-100 border border-transparent'}
+            flex items-center gap-2 p-2 rounded cursor-pointer text-xs mb-0.5
+            ${isSelected ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'hover:bg-gray-100 border border-transparent'}
           `}
           style={{ paddingLeft: `${depth * 12 + 8}px` }}
         >
-          <div className="flex items-center gap-2 overflow-hidden">
-            {/* Toggle Expand/Collapse */}
-            {hasChildren ? (
-               <button 
-                 onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }}
-                 className="p-0.5 hover:bg-gray-200 rounded text-gray-500"
-               >
-                 {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-               </button>
-            ) : (
-               <span className="w-3" /> // Spacer
-            )}
-            
-            {/* Icon & Name */}
-            <Box size={14} className="text-blue-500 shrink-0" />
-            <span className="truncate">
-              {element.id.slice(0, 8)} <span className="text-gray-400 text-xs">({element.elementType})</span>
-            </span>
-          </div>
+           {/* Expand Toggle */}
+           {hasChildren ? (
+             <button onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }} className="text-gray-500 hover:text-black">
+                {expanded ? <ChevronDown size={12}/> : <ChevronRight size={12}/>}
+             </button>
+           ) : <span className="w-3"></span>}
 
-          {/* Add Child Button */}
-          <button 
-            onClick={(e) => handleAddChild(e, element.id)} 
-            className="text-gray-400 hover:text-blue-600 p-1 rounded hover:bg-blue-50 transition-colors"
-            title="Add Child Element"
-          >
-            <DiamondPlus size={14}/>
-          </button>
+           <span className="font-semibold opacity-70 uppercase text-[10px]">{element.type}</span>
+           <span className="truncate text-gray-400">#{nodeId.slice(0, 4)}</span>
         </div>
 
-        {/* Render Children Recursively */}
-        {hasChildren && isExpanded && (
-          <ul className="border-l border-gray-200 ml-4">
-            {element.children.map((child) => (
-              <TreeNode key={child.id} element={child} depth={depth + 1} />
+        {/* Render Children */}
+        {hasChildren && expanded && (
+          <div>
+            {element.children.map(childId => (
+              <LayerNode key={childId} nodeId={childId} depth={depth + 1} />
             ))}
-          </ul>
+          </div>
         )}
-      </li>
+      </div>
     );
   };
 
   return (
-    <aside className="w-64 h-full border-r bg-gray-50 flex flex-col">
-      {/* SECTION 1: COMPONENT TREE */}
-      <div className="p-4 border-b flex-1 overflow-y-auto">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-bold text-gray-700">Layers</h2>
-          <span className="text-xs text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded">{elements.length}</span>
-        </div>
-        
-        <button
-          onClick={handleAddRoot}
-          className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded shadow-sm text-sm font-medium mb-4 flex items-center justify-center gap-2 transition-colors"
-        >
-          <DiamondPlus size={16} /> New Layer
-        </button>
-
-        {elements.length === 0 ? (
-          <div className="text-center p-6 border-2 border-dashed border-gray-200 rounded-lg">
-            <p className="text-xs text-gray-400">No layers yet.</p>
-            <p className="text-xs text-gray-400">Click button above.</p>
-          </div>
-        ) : (
-          <ul className="space-y-1">
-            {elements.map((elem) => (
-              <TreeNode key={elem.id} element={elem} />
-            ))}
-          </ul>
-        )}
+    <aside className="w-64 h-full bg-gray-50 border-r flex flex-col shadow-sm z-20">
+      <div className="p-4 border-b bg-white">
+        <h2 className="font-bold text-gray-800 text-sm uppercase tracking-wide">Components</h2>
       </div>
 
-      {/* SECTION 2: QUICK ADD */}
-      <div className="p-4 bg-white h-1/3 border-t overflow-y-auto">
-        <h2 className="font-bold text-gray-700 mb-3">Quick Add</h2>
-        <div className="grid grid-cols-2 gap-2">
-          {items2.map((item) => (
-            <button
-              key={item}
-              className="p-2 text-xs bg-gray-50 border rounded hover:border-blue-400 hover:bg-blue-50 text-gray-600 transition-all text-left"
-            >
-              {item}
-            </button>
-          ))}
+      <div className="p-4 grid grid-cols-2 gap-3 overflow-y-auto max-h-[40%]">
+        {tools.map((tool) => (
+          <DraggableItem key={tool.type} type={tool.type} icon={tool.icon} label={tool.label} />
+        ))}
+      </div>
+
+      <div className="mt-auto border-t bg-white p-4 flex-1 overflow-y-auto">
+        <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-bold text-gray-500 uppercase">Layers</h3>
+        </div>
+        
+        {/* Start rendering from ROOT */}
+        <div className="space-y-1">
+            {elements["root"] ? (
+                <LayerNode nodeId="root" />
+            ) : (
+                <p className="text-xs text-red-400">Root element missing!</p>
+            )}
         </div>
       </div>
     </aside>

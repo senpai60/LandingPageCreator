@@ -1,39 +1,36 @@
-// Update arguments to accept globalStyles
-export const renderElement = (element, globalStyles = {}, onSelect, selectedId) => {
-  const Tag = element.elementType;
+// Helper function to handle rendering based on Flat State
+export const renderElement = (elementId, elementsMap, onSelect, selectedId) => {
+  const element = elementsMap[elementId];
+  if (!element) return null;
 
-  // 1. Get overrides from context, or default to empty object
-  const overrides = globalStyles[element.id] || {};
-
-  // 2. Merge base styles with overrides
-  const combinedStyles = { ...element.styles, ...overrides };
-
-  // 3. Handle selection highlighting (from previous step)
-  const isSelected = element.id === selectedId;
-  if (isSelected) {
-    combinedStyles.outline = "2px solid #2563eb"; // Add blue border when selected
-    combinedStyles.cursor = "default";
-  } else {
-    combinedStyles.cursor = "pointer";
-  }
+  const Tag = element.type; // Note: 'elementType' changed to 'type' in your new context
+  
+  // Styles handle karna
+  const isSelected = elementId === selectedId;
+  const finalStyles = {
+    ...element.styles,
+    outline: isSelected ? "2px solid #2563eb" : "none", // Blue border if selected
+    cursor: "pointer",
+  };
 
   return (
     <Tag
       key={element.id}
       id={element.id}
-      className={element.classList.join(" ")}
-      style={combinedStyles} // <--- Use the merged styles here
+      style={finalStyles}
+      className={element.props?.className || ""} // Handle className if present
       onClick={(e) => {
         e.stopPropagation();
-        if (onSelect) onSelect(element.id);
+        onSelect(element.id); // Select this element
       }}
       {...element.props}
     >
-      {element.content}
+      {/* Agar Image hai toh content mat dikhao, nahi toh text content */}
+      {element.type !== 'img' && element.content}
 
-      {/* 4. Recursively pass globalStyles down to children */}
-      {element.children.map((child) => 
-        renderElement(child, globalStyles, onSelect, selectedId)
+      {/* Render children by mapping over IDs and looking them up recursively */}
+      {element.children && element.children.map((childId) => 
+        renderElement(childId, elementsMap, onSelect, selectedId)
       )}
     </Tag>
   );
