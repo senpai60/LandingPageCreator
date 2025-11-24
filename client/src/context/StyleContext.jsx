@@ -47,6 +47,7 @@ export const StyleProvider = ({ children }) => {
         selectElement,
         updateStyle,
         getStyle,
+        styles,
       }}
     >
       {children}
