@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { useElementContext } from "../../context/ElementCreateContext"; 
-import {defaultStyle} from "../../utils/generateDefaultStyle"
+import { defaultStyle } from "../../utils/generateDefaultStyle";
 
 export default function ElementCreateContext({ setShowCreateElementContext }) {
-  const { addElement, elements } = useElementContext(); // CONTEXT METHOD
+  // Now extracting targetParentId
+  const { addElement, targetParentId } = useElementContext(); 
 
   const [elementType, setElementType] = useState("div");
   const [elementId, setElementId] = useState("");
@@ -14,7 +15,7 @@ export default function ElementCreateContext({ setShowCreateElementContext }) {
   // HANDLE CREATE ELEMENT
   const handleCreate = () => {
     const genStyles = defaultStyle(elementType)
-    console.log(`creation sn0.=> ${elements.length + 1}`);
+    
     const newElement = {
       id: elementId || crypto.randomUUID(),
       styles: genStyles,
@@ -27,79 +28,81 @@ export default function ElementCreateContext({ setShowCreateElementContext }) {
       children: [],
     };
 
-    addElement(newElement); 
+    // Pass the targetParentId to the addElement function
+    addElement(newElement, targetParentId); 
 
-    setShowCreateElementContext(false); // CLOSE POPUP
+    setShowCreateElementContext(false); 
   };
 
-  useEffect(() => {
-    console.log("Updated Elements: ", elements);
-  }, [elements]);
-
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-      <div className="bg-white shadow-xl rounded-xl w-[420px] p-6 border">
+    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50 backdrop-blur-sm">
+      <div className="bg-white shadow-2xl rounded-xl w-[420px] p-6 border animate-in fade-in zoom-in duration-200">
         {/* Title */}
-        <h2 className="text-xl font-semibold mb-4">Create New Element</h2>
+        <div className="mb-6 border-b pb-2">
+          <h2 className="text-xl font-semibold text-gray-800">Add Element</h2>
+          <p className="text-xs text-gray-500 mt-1">
+            {targetParentId 
+              ? `Adding child to parent: ${targetParentId.slice(0,8)}` 
+              : "Adding new root element"}
+          </p>
+        </div>
 
         {/* FORM */}
         <div className="space-y-4">
           {/* Element Type */}
           <div>
-            <label className="block text-sm font-medium mb-1">
+            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
               Element Type
             </label>
             <select
-              className="w-full border rounded px-3 py-2 bg-gray-50"
+              className="w-full border rounded px-3 py-2 bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none"
               value={elementType}
               onChange={(e) => setElementType(e.target.value)}
             >
-              <option value="div">div</option>
-              <option value="p">p</option>
-              <option value="h1">h1</option>
-              <option value="h2">h2</option>
-              <option value="img">img</option>
-              <option value="button">button</option>
-              <option value="section">section</option>
-              <option value="span">span</option>
+              <option value="div">Container (div)</option>
+              <option value="section">Section</option>
+              <option value="h1">Heading 1</option>
+              <option value="h2">Heading 2</option>
+              <option value="p">Paragraph</option>
+              <option value="span">Text Span</option>
+              <option value="button">Button</option>
+              <option value="img">Image</option>
             </select>
           </div>
 
           {/* ID */}
-          <div>
-            <label className="block text-sm font-medium mb-1">ID</label>
-            <input
-              type="text"
-              placeholder="optional-id"
-              value={elementId}
-              onChange={(e) => setElementId(e.target.value)}
-              className="w-full border rounded px-3 py-2 bg-gray-50"
-            />
-          </div>
-
-          {/* Classes */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Classes (space separated)
-            </label>
-            <input
-              type="text"
-              placeholder="bg-red-500 p-4 text-center"
-              value={classes}
-              onChange={(e) => setClasses(e.target.value)}
-              className="w-full border rounded px-3 py-2 bg-gray-50"
-            />
+          <div className="grid grid-cols-2 gap-4">
+             <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">ID (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="my-element"
+                  value={elementId}
+                  onChange={(e) => setElementId(e.target.value)}
+                  className="w-full border rounded px-3 py-2 bg-gray-50 text-sm"
+                />
+             </div>
+             <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Classes</label>
+                <input
+                  type="text"
+                  placeholder="p-4 bg-red-500"
+                  value={classes}
+                  onChange={(e) => setClasses(e.target.value)}
+                  className="w-full border rounded px-3 py-2 bg-gray-50 text-sm"
+                />
+             </div>
           </div>
 
           {/* Content */}
           {elementType !== "img" && (
             <div>
-              <label className="block text-sm font-medium mb-1">Content</label>
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Text Content</label>
               <textarea
-                placeholder="Inner text"
+                placeholder="Enter inner text..."
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                className="w-full border rounded px-3 py-2 h-20 bg-gray-50"
+                className="w-full border rounded px-3 py-2 h-20 bg-gray-50 text-sm resize-none"
               ></textarea>
             </div>
           )}
@@ -107,34 +110,34 @@ export default function ElementCreateContext({ setShowCreateElementContext }) {
           {/* Image Source */}
           {elementType === "img" && (
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Image Source
+              <label className="block text-xs font-bold text-gray-500 uppercase mb-1">
+                Image URL
               </label>
               <input
                 type="text"
-                placeholder="https://example.com/img.png"
+                placeholder="https://..."
                 value={imgSrc}
                 onChange={(e) => setImgSrc(e.target.value)}
-                className="w-full border rounded px-3 py-2 bg-gray-50"
+                className="w-full border rounded px-3 py-2 bg-gray-50 text-sm"
               />
             </div>
           )}
         </div>
 
         {/* BUTTONS */}
-        <div className="flex justify-end mt-6 gap-2">
+        <div className="flex justify-end mt-8 gap-3">
           <button
             onClick={() => setShowCreateElementContext(false)}
-            className="px-4 py-2 text-sm border rounded hover:bg-gray-100"
+            className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded transition-colors"
           >
             Cancel
           </button>
 
           <button
             onClick={handleCreate}
-            className="px-4 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded"
+            className="px-6 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded shadow-md transition-all transform active:scale-95"
           >
-            Create Element
+            Create
           </button>
         </div>
       </div>
