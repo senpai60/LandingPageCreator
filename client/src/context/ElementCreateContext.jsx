@@ -6,28 +6,75 @@ const ElementCreateContext = createContext();
 // 2. Provider Component
 export const ElementProvider = ({ children }) => {
   const [elements, setElements] = useState([]);
+  
+  // --- MISSING STATE FIXED HERE ---
+  const [targetParentId, setTargetParentId] = useState(null);
 
-  // ADD NEW ELEMENT
-  const addElement = (newElement) => {
-    setElements((prev) => [...prev, newElement]);
-    
+  // ADD NEW ELEMENT (Fixed to handle nesting)
+  const addElement = (newElement, parentId = null) => {
+    if (!parentId) {
+      // Add to root
+      setElements((prev) => [...prev, newElement]);
+    } else {
+      // Add as child to specific parent (Recursive updater)
+      const addZoRecursive = (list) => {
+        return list.map((el) => {
+          if (el.id === parentId) {
+            return { ...el, children: [...(el.children || []), newElement] };
+          }
+          if (el.children && el.children.length > 0) {
+            return { ...el, children: addZoRecursive(el.children) };
+          }
+          return el;
+        });
+      };
+      
+      setElements((prev) => addZoRecursive(prev));
+    }
   };
 
-  // UPDATE ELEMENT
+  // UPDATE ELEMENT (Recursive)
   const updateElement = (id, updatedData) => {
-    setElements((prev) =>
-      prev.map((el) => (el.id === id ? { ...el, ...updatedData } : el))
-    );
+    const updateRecursive = (list) => {
+        return list.map((el) => {
+            if (el.id === id) {
+                return { ...el, ...updatedData };
+            }
+            if (el.children && el.children.length > 0) {
+                return { ...el, children: updateRecursive(el.children) };
+            }
+            return el;
+        });
+    };
+    setElements((prev) => updateRecursive(prev));
   };
 
-  // DELETE ELEMENT
+  // DELETE ELEMENT (Recursive)
   const deleteElement = (id) => {
-    setElements((prev) => prev.filter((el) => el.id !== id));
+     const deleteRecursive = (list) => {
+        return list
+            .filter((el) => el.id !== id)
+            .map((el) => {
+                if (el.children && el.children.length > 0) {
+                    return { ...el, children: deleteRecursive(el.children) };
+                }
+                return el;
+            });
+     };
+     setElements((prev) => deleteRecursive(prev));
   };
 
   return (
     <ElementCreateContext.Provider
-      value={{ elements, addElement, updateElement, deleteElement }}
+      value={{ 
+        elements, 
+        addElement, 
+        updateElement, 
+        deleteElement,
+        // --- EXPOSE THESE NEW VALUES ---
+        targetParentId, 
+        setTargetParentId 
+      }}
     >
       {children}
     </ElementCreateContext.Provider>
